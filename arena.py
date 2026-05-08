@@ -1,0 +1,139 @@
+import random
+import time
+
+WIDTH = 7
+HEIGHT = 5
+
+PLAYER_SYMBOL = "P"
+ENEMY_SYMBOL = "E"
+EMPTY_SYMBOL = "."
+
+class Hero:
+    def __init__(self, name, x, y, health=10, attack=3):
+        self.name = name
+        self.x = x
+        self.y = y
+        self.health = health
+        self.attack = attack
+
+    def position(self):
+        return self.x, self.y
+
+    def is_alive(self):
+        return self.health > 0
+
+    def move(self, dx, dy):
+        self.x = max(0, min(WIDTH - 1, self.x + dx))
+        self.y = max(0, min(HEIGHT - 1, self.y + dy))
+
+    def receive_damage(self, amount):
+        self.health = max(0, self.health - amount)
+
+    def distance_to(self, other):
+        return abs(self.x - other.x) + abs(self.y - other.y)
+
+
+def draw_arena(player, enemy):
+    for y in range(HEIGHT):
+        row = []
+        for x in range(WIDTH):
+            if (x, y) == player.position():
+                row.append(PLAYER_SYMBOL)
+            elif (x, y) == enemy.position():
+                row.append(ENEMY_SYMBOL)
+            else:
+                row.append(EMPTY_SYMBOL)
+        print(" ".join(row))
+    print()
+
+
+def print_status(player, enemy):
+    print(f"{player.name} Health: [{'#' * player.health}{'-' * (10 - player.health)}] {player.health}/10")
+    print(f"{enemy.name} Health: [{'#' * enemy.health}{'-' * (10 - enemy.health)}] {enemy.health}/10")
+    print()
+
+
+def read_player_input():
+    print("Controls: w/a/s/d = move, attack = attack, quit = exit")
+    command = input("Enter command: ").strip().lower()
+    return command
+
+
+def enemy_ai(enemy, player):
+    # Simple chase behavior
+    dx = 0
+    dy = 0
+    if enemy.x < player.x:
+        dx = 1
+    elif enemy.x > player.x:
+        dx = -1
+    if enemy.y < player.y:
+        dy = 1
+    elif enemy.y > player.y:
+        dy = -1
+    if random.random() < 0.6:
+        return dx, dy
+    return 0, 0
+
+
+def main():
+    player = Hero("Player", 0, 0, health=10, attack=4)
+    enemy = Hero("Enemy", WIDTH - 1, HEIGHT - 1, health=10, attack=2)
+
+    running = True
+    print("--- Arena Loaded ---")
+
+    while running:
+        print("\n" + "=" * 30)
+        draw_arena(player, enemy)
+        print_status(player, enemy)
+
+        if not player.is_alive():
+            print("Game Over. The enemy has defeated you.")
+            break
+        if not enemy.is_alive():
+            print("You Win! The enemy has been defeated.")
+            break
+
+        command = read_player_input()
+        if command == "quit":
+            print("Exiting game...")
+            break
+
+        move_dx, move_dy = 0, 0
+        if command == "w":
+            move_dy = -1
+        elif command == "s":
+            move_dy = 1
+        elif command == "a":
+            move_dx = -1
+        elif command == "d":
+            move_dx = 1
+
+        if move_dx != 0 or move_dy != 0:
+            player.move(move_dx, move_dy)
+            print(f"{player.name} moves to {player.position()}.")
+        elif command == "attack":
+            if player.distance_to(enemy) == 1:
+                enemy.receive_damage(player.attack)
+                print(f"{player.name} attacks {enemy.name} for {player.attack} damage!")
+            else:
+                print("Attack missed: enemy is not adjacent.")
+        else:
+            print("Invalid command. Use w/a/s/d, attack, or quit.")
+
+        # Enemy AI turn
+        if enemy.is_alive():
+            if enemy.distance_to(player) == 1:
+                player.receive_damage(enemy.attack)
+                print(f"{enemy.name} attacks {player.name} for {enemy.attack} damage!")
+            else:
+                dx, dy = enemy_ai(enemy, player)
+                enemy.move(dx, dy)
+                if dx != 0 or dy != 0:
+                    print(f"{enemy.name} moves to {enemy.position()}.")
+
+        time.sleep(0.3)
+
+if __name__ == "__main__":
+    main()
